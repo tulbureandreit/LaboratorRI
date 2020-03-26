@@ -12,6 +12,7 @@ cap = WebcamVideoStream(r'D:\boschmobchl\AndreiBosch\Advanced-Lane-Detection\out
 time.sleep(1)
 fps = FPS().start()
 
+sx_thresh = (100, 255)
 while True:
     img = cap.read()
     width = int(img.shape[1] * 50 / 100)
@@ -19,16 +20,47 @@ while True:
     dim = (width, height)
     resized_img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
 
-    frame = resized_img
-    blurred = cv2.GaussianBlur(frame, (7, 7), 0)
 
-    lower_white = np.array([[180, 180, 180]])
+    frame = resized_img
+    frame = frame[int(height/2):height, 0:0+width]
+
+
+    blurred = cv2.GaussianBlur(frame, (7, 7), 0)
+    #cv2.imshow('verif_img_', frame)
+    #cv2.waitKey(0)
+    #hls = cv2.cvtColor(frame, cv2.COLOR_RGB2HLS).astype(np.float)
+    #cv2.imshow('verif_img_hls', hls)
+    #cv2.waitKey(0)
+
+    #h_channel = hls[:, :, 0]
+    #l_channel = hls[:, :, 1]
+    #s_channel = hls[:, :, 2]
+
+    lower_white = np.array([[144, 144, 144]])
     upper_white = np.array([[255, 255, 255]])
 
     maskwhite = cv2.inRange(blurred, lower_white, upper_white)
     reswhite = cv2.bitwise_and(blurred, blurred, mask = maskwhite)
 
-    cv2.imshow('rezultat', reswhite)
+    sobelx = cv2.Sobel(reswhite, cv2.CV_64F, 1, 0, ksize=1)
+    abs_sobelx = np.absolute(sobelx)
+    scaled_sobelx = np.uint8(255 * abs_sobelx / np.max(abs_sobelx))
+    sxbinary = np.zeros_like(scaled_sobelx)
+    sxbinary[(scaled_sobelx >= sx_thresh[0]) & (scaled_sobelx <= sx_thresh[1])] = 1
+    sxbinarye = sxbinary * 255  # (0, 255) cv2.imshow afiseaza doar in intervalul 0,255
+    #daca ii dai intervalul 0,1, ea o sa iti dea inapoi imaginea in negru complet
+
+    combined_binary = np.zeros_like(sxbinary)
+
+    combined_binary[((reswhite >= 1) & (sxbinary == 1))] = 1
+    # combined_binary[((g_binary == 1) & (sxbinary == 1))] = 1
+    totalbinerye = combined_binary * 255
+
+
+    cv2.imshow('verif_blurr', blurred)
+    cv2.imshow('verif_final', totalbinerye)
+    #cv2.imshow('verif_imagine',sxbinarye)
+    #cv2.imshow('rezultat', reswhite)
     k = cv2.waitKey(7) & 0xff
     if k == 27:
         break
@@ -72,10 +104,7 @@ cv2.destroyAllWindows()
 
 #kernel = np.ones((6, 6), np.uint8)
 
-
 #cnts = cv2.findContours(blurred_duplicat.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
-
-
 
 #mask = cv2.erode(blurred_duplicat, kernel, cv2.BORDER_REFLECT, iterations = 20)
 #mask = cv2.dilate(mask, None, iterations=2)
@@ -119,3 +148,64 @@ cv2.destroyAllWindows()
 #cv2.waitKey(0)
 
 #cv2.imwrite()
+
+
+'''
+
+binary_img = pipeline(img)
+
+    undist = cv2.undistort(binary_img, mtx, dist, None, mtx)
+    #cv2.imshow('verif_img_binara_undst',undist)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    img_size = (undist.shape[1], undist.shape[0])
+
+    src = np.float32([[img_size[0]-20, img_size[1]/2+50], [img_size[0], img_size[1]-30], [0, img_size[1]-30], [20, img_size[1]/2+50]])
+
+    offset = 10
+    dst = np.float32([[img_size[0] - offset, 0], [img_size[0] - offset, img_size[1]],
+                      [offset, img_size[1]], [offset, 0]])
+
+    M = cv2.getPerspectiveTransform(src, dst)
+
+    # atentia la IMG SIZE, paote se strica de aici. M transform matrix
+    top_down = cv2.warpPerspective(undist, M, img_size)
+    top_downe = top_down*255
+    cv2.imshow('verif_top_down_birdseye.jpg', top_downe)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    
+    
+    # incarcam o imagine chessboard pt calibrare. o incarcam intr-o lista ca sa o folosim mai tarziu
+cal_image_loc = glob.glob('camera_cal/*.jpg')
+calibration_images = []
+
+for fname in cal_image_loc:
+    img = mpimg.imread(fname)
+    calibration_images.append(img)
+
+# in object points sunt coordonatele colturilor reale ale tablei de sah
+objp = np.zeros((12 * 12, 3), np.float32)
+objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
+
+# punctele tablei de sah se vor salva aici
+objpoints = []
+imgpoints = []  # in img points se salveaza colturile tablei de sah imaginare
+
+
+# gasim punctele
+for image in calibration_images:
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ret, corners = cv2.findChessboardCorners(gray, (12, 12), None)  # 9 si 6 sunt pattern sizes
+    if ret is True:
+        objpoints.append(objp)
+        imgpoints.append(corners)
+        cv2.drawChessboardCorners(image, (12, 12), corners, ret)
+
+#  traiasca opencv
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+# gray.shape e img size si none is flagurile
+# print(gray.shape)
+
+'''

@@ -1,5 +1,5 @@
 # LaboratorRI
-Cod aferent lucrarilor de laborator pentru materia Roboti industriali in anul scolar 2019-2020, semestrul 2, an 1 master
+Cod aferent lucrarilor de laborator pentru materia Roboti inteligenti in anul scolar 2019-2020, semestrul 2, an 1 master
 
 Se face o structura de un laborator odata la 2 saptamani, totalizand 7 intalniri cu predare si una pentru evaluare.
 
